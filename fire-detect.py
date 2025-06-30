@@ -12,7 +12,7 @@ from PIL import Image  # Added for image conversion
 # === Gemini Validation State Tracking ===
 last_fire_validation_time = 0
 last_smoke_validation_time = 0
-validation_interval_sec = 300  # 5 minutes
+validation_interval_sec = 120  # 2 minutes
 
 # === Gemini Flash Validation Function ===
 def validate_with_gemini(image_np, label):
@@ -24,7 +24,7 @@ def validate_with_gemini(image_np, label):
     image_bytes = buffer.getvalue()
     image_b64 = base64.b64encode(image_bytes).decode()
 
-    prompt = f"Is there visible {label} in this image? Answer with only 'yes' or 'no'."
+    prompt = f"Is there visible {label} in this image? Answer with only 'yes' or 'no'. If your confidence is lower than 50%, answer 'no'."
 
     data = {
         "contents": [{
@@ -41,6 +41,7 @@ def validate_with_gemini(image_np, label):
     try:
         res = requests.post(url, json=data)
         response_text = res.json()['candidates'][0]['content']['parts'][0]['text'].strip().lower()
+        print(f"Gemini response for {label}: {response_text}")
         return response_text == "yes"
     except Exception as e:
         print("Gemini validation error:", e)
@@ -87,7 +88,6 @@ def get_center_screen_coordinates(width=608, height=608):
         center_top = (monitor["height"] - height) // 2
         return center_left, center_top, width, height
 
-
 def letterbox(image, expected_size):
     ih, iw = image.shape[:2]
     eh, ew = expected_size, expected_size
@@ -95,7 +95,6 @@ def letterbox(image, expected_size):
     nw, nh = int(iw * scale), int(ih * scale)
     image_resized = cv2.resize(image, (nw, nh))
     return image_resized
-
 
 def draw_bounding_box(frame, box, class_name, confidence):
     x1, y1, x2, y2 = [int(coord) for coord in box]
@@ -106,7 +105,6 @@ def draw_bounding_box(frame, box, class_name, confidence):
     cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 0, 255), 2)
     cv2.rectangle(frame, (text_start_x, text_start_y - text_height), (text_start_x + text_width + baseline, text_start_y + text_height), (0, 0, 255), cv2.FILLED)
     cv2.putText(frame, label, (text_start_x + baseline, text_start_y + baseline), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
-
 
 def detect_fire_and_smoke(model, frame, time_window=1000, detection_threshold=1):
     global last_fire_validation_time, last_smoke_validation_time
@@ -147,7 +145,6 @@ def detect_fire_and_smoke(model, frame, time_window=1000, detection_threshold=1)
             last_smoke_validation_time = current_time
 
     return fire_detected, smoke_detected
-
 
 def capture_cctv_stream(model, rtsp_url, max_retries=3, retry_delay=5):
     retry_count = 0
@@ -213,7 +210,6 @@ def capture_cctv_stream(model, rtsp_url, max_retries=3, retry_delay=5):
     print(f"Failed to maintain connection after {max_retries} attempts")
     cv2.destroyAllWindows()
 
-
 def capture_webcam(model):
     cap = cv2.VideoCapture(0)
     if not cap.isOpened():
@@ -257,7 +253,6 @@ def capture_webcam(model):
     finally:
         cap.release()
         cv2.destroyAllWindows()
-
 
 def screen_capture(model):
     model_input_size = 640
@@ -303,6 +298,8 @@ def screen_capture(model):
                     break
         finally:
             cv2.destroyAllWindows()
+
+
 
 
 def main():
