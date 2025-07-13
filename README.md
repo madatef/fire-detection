@@ -1,5 +1,5 @@
-to run the project on a mac:
-python3 -m venv .venv
-source .venv/bin/activate
+to run the project on Windows:
+python -m venv .venv
+source .venv/Scripts/activate  #Git bash
 pip install opencv-python mss torch numpy ultralytics
-python3 fire-detect.py# fire
+python fire-detect.py 
